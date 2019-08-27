@@ -116,10 +116,17 @@ def construct_classifier():
     
     return model
 
-def construct_model(quantized, saved_model_dir=None, starting_weights_directory=None, is_frozen=False, is_training=True, size=64):
-    # from azureml.contrib.brainwave.models import Resnet50, QuantizedResnet50
-    from azureml.accel.models import Resnet50, QuantizedResnet50
+def construct_model(
+        quantized,
+        saved_model_dir = None,
+        starting_weights_directory = None,
+        is_frozen = False,
+        is_training = True,
+        size = 64,
+        weights_file = None
+        ):
 
+    from azureml.accel.models import Resnet50, QuantizedResnet50
     import tensorflow as tf
     from keras import backend as K
     
@@ -129,7 +136,8 @@ def construct_model(quantized, saved_model_dir=None, starting_weights_directory=
     # Construct featurizer using quantized or unquantized ResNet50 model
     
     if not quantized:
-        featurizer = Resnet50(saved_model_dir, is_frozen=is_frozen, custom_weights_directory = starting_weights_directory)
+        # featurizer = Resnet50(saved_model_dir, is_frozen=is_frozen, custom_weights_directory = starting_weights_directory)
+        featurizer = Resnet50(saved_model_dir)
     else:
         featurizer = QuantizedResnet50(saved_model_dir, is_frozen=is_frozen, custom_weights_directory = starting_weights_directory)
     
@@ -145,9 +153,13 @@ def construct_model(quantized, saved_model_dir=None, starting_weights_directory=
     tf.global_variables_initializer().run()
     
     if not is_frozen:
+        print('Restoring weights from featurizer into session')
         featurizer.restore_weights(sess)
     
-    if starting_weights_directory is not None:
+    if not(weights_file is None):
+        print("loading classifier weights from", weights_file)
+        classifier.load_weights(weights_file)
+    elif starting_weights_directory is not None:
         print("loading classifier weights from", starting_weights_directory+'/class_weights_best.h5')
         classifier.load_weights(starting_weights_directory+'/class_weights_best.h5')
         
